@@ -14,30 +14,18 @@ PASSWORD=$(bashio::config 'password')
 bashio::log.level "${LOG_LEVEL}"
 bashio::log.info "Configuring HTTP Proxy..."
 
-# Create TinyProxy configuration
+# Create TinyProxy configuration - very minimal to avoid any syntax issues
 cat > "/etc/tinyproxy/tinyproxy.conf" << EOF
 # TinyProxy Configuration for Home Assistant
-
-# Main settings
 Port 8888
 Timeout 600
-
-# Completely disable logging
 LogLevel Critical
-Syslog Off
-LogFile "/dev/null"
 
-# Modern server settings
-ServerName "HTTP Proxy for Home Assistant"
-ServerIdent Off
+# Disable all logging
+Syslog Off
 
 # Connection settings
 ConnectPort 443
-ConnectPort 563
-
-# Security settings
-ViaProxyName "HassProxy"
-DisableViaHeader Yes
 EOF
 
 # Add allowed networks
