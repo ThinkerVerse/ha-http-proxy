@@ -22,12 +22,16 @@ cat > "/etc/squid/squid.conf" << EOF
 
 # Basic settings
 http_port 8888
-maximum_object_size 1024 MB
+
+# Cache settings
 cache_mem ${CACHE_SIZE}
+maximum_object_size 1024 MB
 maximum_object_size_in_memory 10 MB
+cache_dir ufs /var/cache/squid 100 16 256
+
+# Performance settings
 memory_replacement_policy heap GDSF
 cache_replacement_policy heap LFUDA
-cache_dir ufs /var/cache/squid ${CACHE_SIZE} 16 256
 
 # Logging settings
 access_log daemon:/var/log/squid/access.log squid

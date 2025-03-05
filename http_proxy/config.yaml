@@ -1,6 +1,6 @@
 name: "HTTP Proxy"
 description: "HTTP proxy server for local network devices"
-version: "1.0.1"
+version: "1.0.2"
 slug: "http_proxy"
 init: false
 arch:
@@ -23,7 +23,7 @@ options:
     - "172.16.0.0/12"
     - "10.0.0.0/8"
   max_connections: 100
-  cache_size: "100m"
+  cache_size: "100 MB"
   authentication: false
   username: ""
   password: ""
