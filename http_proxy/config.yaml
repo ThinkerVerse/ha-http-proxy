@@ -1,0 +1,38 @@
+name: "HTTP Proxy"
+description: "HTTP proxy server for local network devices"
+version: "1.0.0"
+slug: "http_proxy"
+init: false
+arch:
+  - armhf
+  - armv7
+  - aarch64
+  - amd64
+  - i386
+startup: services
+ports:
+  8888/tcp: 8888
+  8889/tcp: 8889
+ports_description:
+  8888/tcp: "HTTP proxy port"
+  8889/tcp: "Admin interface"
+options:
+  log_level: "info"
+  allowed_networks:
+    - "192.168.0.0/16"
+    - "172.16.0.0/12"
+    - "10.0.0.0/8"
+  max_connections: 100
+  cache_size: "100m"
+  authentication: false
+  username: ""
+  password: ""
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)
+  allowed_networks:
+    - str
+  max_connections: int(10,500)
+  cache_size: str
+  authentication: bool
+  username: str
+  password: str

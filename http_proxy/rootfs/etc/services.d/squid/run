@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bashio
+set -e
+
+bashio::log.info "Starting Squid proxy server..."
+exec squid -N

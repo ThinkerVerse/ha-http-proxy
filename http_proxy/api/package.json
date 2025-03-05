@@ -1,0 +1,12 @@
+{
+    "name": "http-proxy-api",
+    "version": "1.0.0",
+    "description": "API for HTTP Proxy Home Assistant addon",
+    "main": "server.js",
+    "scripts": {
+      "start": "node server.js"
+    },
+    "dependencies": {
+      "express": "^4.18.2"
+    }
+  }
