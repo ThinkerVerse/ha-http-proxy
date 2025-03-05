@@ -21,43 +21,23 @@ cat > "/etc/tinyproxy/tinyproxy.conf" << EOF
 # Main settings
 Port 8888
 Timeout 600
-DefaultErrorFile "/usr/share/tinyproxy/default.html"
-StatFile "/usr/share/tinyproxy/stats.html"
-LogFile "/var/log/tinyproxy/tinyproxy.log"
+
+# Completely disable logging
+LogLevel Critical
 Syslog Off
+LogFile "/dev/null"
 
-# Logging level (based on Home Assistant log level)
-EOF
+# Modern server settings
+ServerName "HTTP Proxy for Home Assistant"
+ServerIdent Off
 
-# Set log level
-case "${LOG_LEVEL}" in
-  "trace" | "debug")
-    echo "LogLevel Debug" >> "/etc/tinyproxy/tinyproxy.conf"
-    ;;
-  "info" | "notice")
-    echo "LogLevel Info" >> "/etc/tinyproxy/tinyproxy.conf"
-    ;;
-  "warning")
-    echo "LogLevel Warning" >> "/etc/tinyproxy/tinyproxy.conf"
-    ;;
-  "error" | "fatal")
-    echo "LogLevel Error" >> "/etc/tinyproxy/tinyproxy.conf"
-    ;;
-  *)
-    echo "LogLevel Info" >> "/etc/tinyproxy/tinyproxy.conf"
-    ;;
-esac
+# Connection settings
+ConnectPort 443
+ConnectPort 563
 
-# Continue configuration
-cat >> "/etc/tinyproxy/tinyproxy.conf" << EOF
 # Security settings
-MaxClients 100
-MinSpareServers 5
-MaxSpareServers 20
-StartServers 10
-MaxRequestsPerChild 0
-
-# Access control
+ViaProxyName "HassProxy"
+DisableViaHeader Yes
 EOF
 
 # Add allowed networks
@@ -88,9 +68,5 @@ server {
     }
 }
 EOF
-
-# Create log directory
-mkdir -p /var/log/tinyproxy
-chown nobody:nobody /var/log/tinyproxy
 
 bashio::log.info "HTTP Proxy configuration completed"
