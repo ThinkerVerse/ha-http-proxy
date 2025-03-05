@@ -14,13 +14,18 @@ PASSWORD=$(bashio::config 'password')
 bashio::log.level "${LOG_LEVEL}"
 bashio::log.info "Configuring HTTP Proxy..."
 
-# Create a minimal Squid configuration
+# Create Squid configuration with memory fixes
 cat > "/etc/squid/squid.conf" << EOF
 # Minimal Squid Configuration
 http_port 8888
 
-# Basic caching settings
-cache_dir ufs /var/cache/squid 100 16 256
+# Drastically reduce memory usage
+cache_mem 32 MB
+memory_pools off
+
+# Small cache size
+cache_dir ufs /var/cache/squid 10 16 256
+maximum_object_size 10 MB
 
 # Log settings
 access_log /var/log/squid/access.log
@@ -81,6 +86,8 @@ mkdir -p /var/cache/squid
 mkdir -p /var/log/squid
 chown -R squid:squid /var/cache/squid
 chown -R squid:squid /var/log/squid
-squid -z
+
+# Initialize cache with minimal size
+squid -z -F
 
 bashio::log.info "HTTP Proxy configuration completed"
