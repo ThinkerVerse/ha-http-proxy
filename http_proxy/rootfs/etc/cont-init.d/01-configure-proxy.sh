@@ -6,8 +6,6 @@
 
 # Get configuration values
 LOG_LEVEL=$(bashio::config 'log_level')
-MAX_CONNECTIONS=$(bashio::config 'max_connections')
-CACHE_SIZE=$(bashio::config 'cache_size')
 AUTHENTICATION=$(bashio::config 'authentication')
 USERNAME=$(bashio::config 'username')
 PASSWORD=$(bashio::config 'password')
@@ -16,31 +14,17 @@ PASSWORD=$(bashio::config 'password')
 bashio::log.level "${LOG_LEVEL}"
 bashio::log.info "Configuring HTTP Proxy..."
 
-# Create Squid configuration
+# Create a minimal Squid configuration
 cat > "/etc/squid/squid.conf" << EOF
-# Squid Configuration for Home Assistant HTTP Proxy addon
-
-# Basic settings
+# Minimal Squid Configuration
 http_port 8888
 
-# Cache settings
-cache_mem ${CACHE_SIZE}
-maximum_object_size 1024 MB
-maximum_object_size_in_memory 10 MB
+# Basic caching settings
 cache_dir ufs /var/cache/squid 100 16 256
 
-# Performance settings
-memory_replacement_policy heap GDSF
-cache_replacement_policy heap LFUDA
-
-# Logging settings
-access_log daemon:/var/log/squid/access.log squid
+# Log settings
+access_log /var/log/squid/access.log
 cache_log /var/log/squid/cache.log
-cache_store_log /var/log/squid/store.log
-
-# Instead of client_max_conn, use client_db limits
-client_db on
-client_max_pending_auth ${MAX_CONNECTIONS}
 
 # Network access controls
 EOF
@@ -94,7 +78,9 @@ EOF
 
 # Ensure cache directory exists and has correct permissions
 mkdir -p /var/cache/squid
+mkdir -p /var/log/squid
 chown -R squid:squid /var/cache/squid
+chown -R squid:squid /var/log/squid
 squid -z
 
 bashio::log.info "HTTP Proxy configuration completed"
