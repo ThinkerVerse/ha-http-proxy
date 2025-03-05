@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bashio
 # ==============================================================================
 # Home Assistant Add-on: HTTP Proxy
-# Runs Squid proxy server
+# Runs Tinyproxy proxy server
 # ==============================================================================
-bashio::log.info "Starting Squid proxy server..."
-exec squid -N
+bashio::log.info "Starting Tinyproxy proxy server..."
+exec tinyproxy -d -c /etc/tinyproxy/tinyproxy.conf

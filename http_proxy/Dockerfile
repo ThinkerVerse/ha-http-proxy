@@ -3,30 +3,21 @@ FROM $BUILD_FROM
 
 # Install required packages
 RUN apk add --no-cache \
-    squid \
+    tinyproxy \
     nginx \
-    supervisor \
-    jq \
-    curl \
-    openssl \
     nodejs \
-    npm
+    npm \
+    openssl \
+    curl
 
 # Set up directories
-RUN mkdir -p /var/cache/squid \
-    && mkdir -p /var/log/squid \
-    && mkdir -p /var/www/html \
-    && mkdir -p /opt/api \
-    && chown -R squid:squid /var/cache/squid \
-    && chown -R squid:squid /var/log/squid
-
-# Create cache directories for Squid
-RUN mkdir -p /var/cache/squid && squid -z
+RUN mkdir -p /var/www/html \
+    && mkdir -p /opt/api
 
 # Copy root filesystem
 COPY rootfs /
 
-# Make ABSOLUTELY sure scripts are executable
+# Make scripts executable
 RUN chmod -R +x /etc/services.d/*/run \
     && chmod -R +x /etc/cont-init.d/ \
     && chmod -R +x /usr/bin/

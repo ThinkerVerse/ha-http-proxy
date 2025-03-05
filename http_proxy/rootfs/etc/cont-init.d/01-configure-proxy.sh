@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bashio
 # ==============================================================================
 # Home Assistant Add-on: HTTP Proxy
-# Configures the HTTP Proxy before running
+# Configures the TinyProxy before running
 # ==============================================================================
 
 # Get configuration values
@@ -14,51 +14,63 @@ PASSWORD=$(bashio::config 'password')
 bashio::log.level "${LOG_LEVEL}"
 bashio::log.info "Configuring HTTP Proxy..."
 
-# Create Squid configuration with NO caching to avoid memory issues
-cat > "/etc/squid/squid.conf" << EOF
-# Basic Settings
-http_port 8888
+# Create TinyProxy configuration
+cat > "/etc/tinyproxy/tinyproxy.conf" << EOF
+# TinyProxy Configuration for Home Assistant
 
-# Disable caching completely
-cache deny all
-memory_pools off
+# Main settings
+Port 8888
+Timeout 600
+DefaultErrorFile "/usr/share/tinyproxy/default.html"
+StatFile "/usr/share/tinyproxy/stats.html"
+LogFile "/var/log/tinyproxy/tinyproxy.log"
+Syslog Off
 
-# Log settings
-access_log /var/log/squid/access.log
-cache_log /var/log/squid/cache.log
+# Logging level (based on Home Assistant log level)
+EOF
 
-# Network access controls
+# Set log level
+case "${LOG_LEVEL}" in
+  "trace" | "debug")
+    echo "LogLevel Debug" >> "/etc/tinyproxy/tinyproxy.conf"
+    ;;
+  "info" | "notice")
+    echo "LogLevel Info" >> "/etc/tinyproxy/tinyproxy.conf"
+    ;;
+  "warning")
+    echo "LogLevel Warning" >> "/etc/tinyproxy/tinyproxy.conf"
+    ;;
+  "error" | "fatal")
+    echo "LogLevel Error" >> "/etc/tinyproxy/tinyproxy.conf"
+    ;;
+  *)
+    echo "LogLevel Info" >> "/etc/tinyproxy/tinyproxy.conf"
+    ;;
+esac
+
+# Continue configuration
+cat >> "/etc/tinyproxy/tinyproxy.conf" << EOF
+# Security settings
+MaxClients 100
+MinSpareServers 5
+MaxSpareServers 20
+StartServers 10
+MaxRequestsPerChild 0
+
+# Access control
 EOF
 
 # Add allowed networks
 for network in $(bashio::config 'allowed_networks'); do
-  echo "acl allowed_networks src ${network}" >> "/etc/squid/squid.conf"
+  echo "Allow ${network}" >> "/etc/tinyproxy/tinyproxy.conf"
 done
 
 # Configure authentication if enabled
 if bashio::config.true 'authentication'; then
-  if bashio::var.is_empty "${USERNAME}" || bashio::var.is_empty "${PASSWORD}"; then
-    bashio::log.warning "Authentication enabled but username or password is empty"
-  else
-    # Create password file
-    touch /etc/squid/passwd
-    echo "${USERNAME}:$(openssl passwd -crypt ${PASSWORD})" > /etc/squid/passwd
-    
-    # Configure authentication
-    cat >> "/etc/squid/squid.conf" << EOF
-auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwd
-auth_param basic realm HTTP Proxy
-acl authenticated proxy_auth REQUIRED
-http_access allow authenticated allowed_networks
-EOF
+  if ! bashio::var.is_empty "${USERNAME}" && ! bashio::var.is_empty "${PASSWORD}"; then
+    echo "BasicAuth ${USERNAME} ${PASSWORD}" >> "/etc/tinyproxy/tinyproxy.conf"
   fi
-else
-  # No authentication
-  echo "http_access allow allowed_networks" >> "/etc/squid/squid.conf"
 fi
-
-# Deny access to anything not explicitly allowed
-echo "http_access deny all" >> "/etc/squid/squid.conf"
 
 # Configure the web admin interface with nginx
 cat > "/etc/nginx/http.d/default.conf" << EOF
@@ -77,8 +89,8 @@ server {
 }
 EOF
 
-# Ensure log directory exists
-mkdir -p /var/log/squid
-chown -R squid:squid /var/log/squid
+# Create log directory
+mkdir -p /var/log/tinyproxy
+chown nobody:nobody /var/log/tinyproxy
 
 bashio::log.info "HTTP Proxy configuration completed"
