@@ -1,13 +1,11 @@
 #!/usr/bin/with-contenv bashio
-set -e
-
+# ==============================================================================
+# Home Assistant Add-on: HTTP Proxy
+# Runs the HTTP Proxy
+# ==============================================================================
 bashio::log.info "Starting HTTP Proxy addon..."
 
-# Wait for services to start
-bashio::log.info "Waiting for services to start..."
-sleep 5
-
-# Keep the script running
+# Keep the script running to keep container alive
 while true; do
-  sleep 600
+  sleep 86400
 done

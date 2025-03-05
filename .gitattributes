@@ -1,0 +1,5 @@
+# Ensure all shell scripts use LF
+*.sh text eol=lf
+run text eol=lf
+# Dockerfile needs LF too
+Dockerfile text eol=lf

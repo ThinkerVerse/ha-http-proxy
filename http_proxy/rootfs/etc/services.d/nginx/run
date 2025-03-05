@@ -1,5 +1,7 @@
 #!/usr/bin/with-contenv bashio
-set -e
-
+# ==============================================================================
+# Home Assistant Add-on: HTTP Proxy
+# Runs Nginx web server
+# ==============================================================================
 bashio::log.info "Starting Nginx web server..."
 exec nginx -g "daemon off;"

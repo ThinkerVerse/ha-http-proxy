@@ -1,5 +1,7 @@
 #!/usr/bin/with-contenv bashio
-set -e
-
+# ==============================================================================
+# Home Assistant Add-on: HTTP Proxy
+# Runs Squid proxy server
+# ==============================================================================
 bashio::log.info "Starting Squid proxy server..."
 exec squid -N

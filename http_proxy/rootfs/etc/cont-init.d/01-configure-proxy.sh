@@ -1,9 +1,11 @@
 #!/usr/bin/with-contenv bashio
-set -e
+# ==============================================================================
+# Home Assistant Add-on: HTTP Proxy
+# Configures the HTTP Proxy before running
+# ==============================================================================
 
 # Get configuration values
 LOG_LEVEL=$(bashio::config 'log_level')
-ALLOWED_NETWORKS=$(bashio::jq "${__BASHIO_CONFIG_PATH}" '.allowed_networks[]')
 MAX_CONNECTIONS=$(bashio::config 'max_connections')
 CACHE_SIZE=$(bashio::config 'cache_size')
 AUTHENTICATION=$(bashio::config 'authentication')
@@ -39,13 +41,13 @@ client_max_conn ${MAX_CONNECTIONS}
 EOF
 
 # Add allowed networks
-for network in ${ALLOWED_NETWORKS}; do
+for network in $(bashio::config 'allowed_networks'); do
   echo "acl allowed_networks src ${network}" >> "/etc/squid/squid.conf"
 done
 
 # Configure authentication if enabled
-if [ "${AUTHENTICATION}" = "true" ]; then
-  if [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
+if bashio::config.true 'authentication'; then
+  if bashio::var.is_empty "${USERNAME}" || bashio::var.is_empty "${PASSWORD}"; then
     bashio::log.warning "Authentication enabled but username or password is empty"
   else
     # Create password file

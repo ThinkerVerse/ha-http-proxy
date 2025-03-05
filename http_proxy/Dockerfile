@@ -26,10 +26,10 @@ RUN mkdir -p /var/cache/squid && squid -z
 # Copy root filesystem
 COPY rootfs /
 
-# Make scripts executable
-RUN chmod +x /etc/services.d/*/run \
-    && chmod +x /usr/bin/run.sh \
-    && chmod +x /etc/cont-init.d/*
+# Make ABSOLUTELY sure scripts are executable
+RUN chmod -R +x /etc/services.d/*/run \
+    && chmod -R +x /etc/cont-init.d/ \
+    && chmod -R +x /usr/bin/
 
 # Copy API server files
 COPY api /opt/api/
