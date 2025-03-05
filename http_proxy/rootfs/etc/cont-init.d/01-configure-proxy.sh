@@ -38,8 +38,9 @@ access_log daemon:/var/log/squid/access.log squid
 cache_log /var/log/squid/cache.log
 cache_store_log /var/log/squid/store.log
 
-# Connection settings
-client_max_conn ${MAX_CONNECTIONS}
+# Instead of client_max_conn, use client_db limits
+client_db on
+client_max_pending_auth ${MAX_CONNECTIONS}
 
 # Network access controls
 EOF
