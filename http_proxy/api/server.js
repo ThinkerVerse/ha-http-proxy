@@ -34,29 +34,25 @@ function updateConfig(newConfig) {
 
 // Get proxy status
 function getProxyStatus(callback) {
+  // Check if the process managed by s6 under the name 'squid' (which runs tinyproxy) is active.
   exec('pgrep -f squid', (error, stdout, stderr) => {
     if (error) {
+      // pgrep returns an error if no process is found
       callback({ running: false });
       return;
     }
-    
-    exec('squidclient mgr:info', (error, stdout, stderr) => {
-      if (error) {
-        callback({ running: true, stats: null });
-        return;
-      }
-      
-      // Parse squid stats
-      const stats = {};
-      const lines = stdout.split('\n');
-      lines.forEach(line => {
-        const parts = line.split(':');
-        if (parts.length === 2) {
-          stats[parts[0].trim()] = parts[1].trim();
-        }
-      });
-      
-      callback({ running: true, stats });
+    // If pgrep succeeds, the process is running.
+    // Tinyproxy does not have a direct equivalent to 'squidclient mgr:info' for rich stats.
+    // We'll return a basic status message.
+    callback({ 
+      running: true, 
+      stats: { 
+        message: "Tinyproxy service is running (managed as 'squid' by s6).",
+        // uptime and other detailed stats are not readily available from Tinyproxy via CLI.
+        uptime: "N/A", 
+        client_http_requests: "N/A",
+        cache_hit_rate: "N/A"
+      } 
     });
   });
 }
@@ -81,6 +77,19 @@ app.post('/api/config', (req, res) => {
 app.get('/api/status', (req, res) => {
   getProxyStatus((status) => {
     res.json(status);
+  });
+});
+
+app.post('/api/proxy/restart', (req, res) => {
+  // Note: The service name is 'squid' as identified in rootfs/etc/services.d/
+  // even though the underlying proxy is tinyproxy.
+  exec('s6-svc -r /var/run/s6/services/squid', (error, stdout, stderr) => {
+    if (error) {
+      console.error('Error restarting proxy service:', error);
+      res.status(500).json({ success: false, message: 'Failed to restart proxy service.', error: error.message });
+      return;
+    }
+    res.json({ success: true, message: 'Proxy service restarted successfully.' });
   });
 });
 

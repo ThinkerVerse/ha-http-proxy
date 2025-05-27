@@ -12,7 +12,7 @@ This addon provides an HTTP proxy server for your local network devices. It allo
 1. Add this repository to your Home Assistant instance:
    - Navigate to Settings → Add-ons → Add-on Store
    - Click the three dots in the top right corner and select "Repositories"
-   - Add the repository URL: `https://github.com/svnsundar/ha-http-proxy`
+   - Add the repository URL: `https://github.com/ThinkerVerse/ha-http-proxy`
    - Click "Add"
 
 2. Find the "HTTP Proxy" addon in the store and click "Install"
@@ -27,8 +27,6 @@ This addon provides an HTTP proxy server for your local network devices. It allo
 |--------|-------------|---------|
 | `log_level` | The level of logging detail | `info` |
 | `allowed_networks` | List of networks that can use the proxy | `["192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8"]` |
-| `max_connections` | Maximum number of simultaneous connections | `100` |
-| `cache_size` | Size of the proxy cache | `100m` |
 | `authentication` | Enable/disable proxy authentication | `false` |
 | `username` | Username for authentication (if enabled) | `""` |
 | `password` | Password for authentication (if enabled) | `""` |
@@ -51,10 +49,21 @@ The addon provides an admin interface accessible at:
 
 From the admin interface, you can:
 
-- Monitor proxy usage and performance
-- View access logs
-- Adjust configuration settings
-- Restart the proxy service
+- **Monitor Proxy Usage and Performance:**
+    - View current proxy status (e.g., Running, Stopped).
+    - Check proxy uptime.
+    - See the number of requests processed.
+    *(Note: Detailed statistics like cache hit rate are not readily available from Tinyproxy.)*
+- **View Access Logs:**
+    - Display recent access logs from the proxy to monitor client requests. Logs can be refreshed on demand.
+- **Adjust Configuration Settings:**
+    - **Log Level:** Change the verbosity of proxy logs (e.g., trace, debug, info).
+    - **Allowed Networks:** Update the list of IP addresses or network ranges (CIDR notation) permitted to use the proxy.
+    - **Authentication:** Enable or disable username/password authentication for proxy access.
+    - **Username/Password:** Set or update credentials if authentication is enabled.
+    *(Configuration changes require saving and may prompt for a proxy restart to take effect.)*
+- **Restart the Proxy Service:**
+    - A dedicated button allows for restarting the proxy service, useful for applying configuration changes or troubleshooting.
 
 ## Troubleshooting
 

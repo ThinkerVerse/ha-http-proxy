@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Proxy Admin</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>HTTP Proxy Admin Interface</h1>
+
+        <div id="message-area" class="message-area"></div>
+
+        <section id="proxy-status">
+            <h2>Proxy Status & Performance</h2>
+            <p><strong>Status:</strong> <span id="status-value">Loading...</span></p>
+            <p><strong>Uptime:</strong> <span id="uptime-value">Loading...</span></p>
+            <p><strong>Requests Processed:</strong> <span id="requests-value">Loading...</span></p>
+            <p><strong>Cache Hit Rate:</strong> <span id="cache-hit-rate-value">Loading...</span></p>
+            <button id="refresh-status-btn">Refresh Status</button>
+        </section>
+
+        <section id="access-logs">
+            <h2>Access Logs</h2>
+            <button id="refresh-logs-btn">Refresh Logs</button>
+            <pre id="logs-content">Loading logs...</pre>
+        </section>
+
+        <section id="configuration-settings">
+            <h2>Configuration Settings</h2>
+            <form id="config-form">
+                <div>
+                    <label for="log_level">Log Level:</label>
+                    <select id="log_level" name="log_level">
+                        <option value="trace">Trace</option>
+                        <option value="debug">Debug</option>
+                        <option value="info">Info</option>
+                        <option value="notice">Notice</option>
+                        <option value="warning">Warning</option>
+                        <option value="error">Error</option>
+                        <option value="fatal">Fatal</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="allowed_networks">Allowed Networks (comma-separated):</label>
+                    <input type="text" id="allowed_networks" name="allowed_networks">
+                </div>
+                <div>
+                    <label for="authentication">Enable Authentication:</label>
+                    <input type="checkbox" id="authentication" name="authentication">
+                </div>
+                <div>
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" disabled>
+                </div>
+                <div>
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" disabled>
+                </div>
+                <button type="button" id="save-config-btn">Save Configuration</button>
+            </form>
+        </section>
+
+        <section id="controls">
+            <h2>Controls</h2>
+            <button id="restart-proxy-btn">Restart Proxy</button>
+        </section>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
