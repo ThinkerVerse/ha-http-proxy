@@ -1,5 +1,5 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/debian-base/amd64:8.1.4
-FROM ${BUILD_FROM}
+ARG BUILD_FROM
+FROM $BUILD_FROM
 
 # Install required packages
 RUN apk add --no-cache \
