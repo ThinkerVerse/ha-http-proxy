@@ -1,5 +1,5 @@
-ARG BUILD_FROM
-FROM $BUILD_FROM
+ARG BUILD_FROM=ghcr.io/hassio-addons/debian-base/amd64:8.1.4
+FROM ${BUILD_FROM}
 
 # Install required packages
 RUN apk add --no-cache \
@@ -34,7 +34,7 @@ EXPOSE 8888 8889
 LABEL \
     io.hass.name="HTTP Proxy" \
     io.hass.description="HTTP proxy server for local network devices" \
-    io.hass.arch="armhf|armv7|aarch64|amd64|i386" \
+    io.hass.arch="aarch64|amd64" \
     io.hass.type="addon" \
     maintainer="Your Name <your.email@example.com>"
 

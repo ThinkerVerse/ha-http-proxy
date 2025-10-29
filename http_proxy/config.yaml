@@ -1,6 +1,6 @@
 name: "HTTP Proxy"
 description: "HTTP proxy server for local network devices"
-version: "3.0.2"
+version: "3.1.0"
 slug: "http_proxy"
 init: false
 arch:
