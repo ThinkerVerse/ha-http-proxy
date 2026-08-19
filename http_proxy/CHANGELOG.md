@@ -27,6 +27,21 @@
 - `GET /api/status` now reports the proxy's pid and uptime, read from
   `/proc/<pid>/stat`, rather than only whether it is alive.
 
+### Documentation
+
+- Added `DOCS.md`, so the add-on now has a **Documentation** tab inside Home
+  Assistant. There was none before: Home Assistant sources that tab from
+  `DOCS.md`, and the add-on only shipped a `README.md`, which is visible on
+  GitHub but not in the app.
+- Rewrote the documentation around the questions it failed to answer: what each
+  option actually controls, that `allowed_networks` and `authentication` are two
+  separate gates answering `403` and `407` respectively, how to point common
+  operating systems and browsers at the proxy, and what the add-on deliberately
+  does not do (no caching, no HTTPS inspection, no content filtering).
+- Added a troubleshooting section keyed by the message you actually see.
+- The repository README is now a proper landing page with a one-click "add
+  repository" button.
+
 ### Changed
 
 - Port 8889 is no longer mapped by default. The ingress panel replaces it; map

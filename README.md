@@ -1,32 +1,43 @@
-# Home Assistant Add-on: HTTP Proxy
+# ThinkerVerse Home Assistant Add-ons
 
-HTTP proxy server for Home Assistant, for routing traffic from local network devices.
+A Home Assistant add-on repository.
 
 ## Installation
 
-Add this repository to your Home Assistant instance:
+Click the button below to add this repository to your Home Assistant instance:
 
-1. Navigate to **Settings → Add-ons → Add-on Store**.
-2. Open the three-dot menu in the top right and select **Repositories**.
-3. Add `https://github.com/ThinkerVerse/ha-http-proxy` and click **Add**.
+[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FThinkerVerse%2Fha-http-proxy)
 
-## Add-ons
+Or add it by hand: go to **Settings → Add-ons → Add-on Store**, open the
+three-dot menu in the top right, choose **Repositories**, and add:
 
-This repository contains the following add-ons:
+```
+https://github.com/ThinkerVerse/ha-http-proxy
+```
+
+The add-ons below will then appear in the store.
+
+## Add-ons in this repository
 
 ### [HTTP Proxy](./http_proxy)
 
-![Supports aarch64 Architecture][aarch64-shield]
-![Supports amd64 Architecture][amd64-shield]
+![Supports aarch64 Architecture][aarch64-shield] ![Supports amd64 Architecture][amd64-shield]
 
-HTTP proxy server for local network devices, backed by
-[Tinyproxy](https://tinyproxy.github.io/), with a small web admin interface.
+An HTTP proxy for the devices on your local network, powered by
+[Tinyproxy][tinyproxy]. Restrict which machines may reach the internet,
+optionally require a username and password, and manage it all from a panel in
+the Home Assistant sidebar.
 
-32-bit ARM (`armhf`, `armv7`) and `i386` are not supported.
+📖 [Documentation](./http_proxy/DOCS.md) · 📝 [Changelog](./http_proxy/CHANGELOG.md)
 
-[aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
-[amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
+## Support
+
+Open an issue on [GitHub](https://github.com/ThinkerVerse/ha-http-proxy/issues).
 
 ## License
 
 MIT
+
+[tinyproxy]: https://tinyproxy.github.io/
+[aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
+[amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg

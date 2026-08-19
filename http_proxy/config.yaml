@@ -13,9 +13,9 @@ startup: services
 # Supervisor instead of writing /data/options.json, which is overwritten.
 hassio_api: true
 # The admin interface is served through Home Assistant, which authenticates the
-# user. ingress_port is internal and must not appear under `ports`.
+# user. It listens on the default ingress port, 8099, which is internal and
+# deliberately absent from `ports`.
 ingress: true
-ingress_port: 8099
 panel_icon: mdi:web
 panel_title: "HTTP Proxy"
 ports:
