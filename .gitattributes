@@ -1,5 +1,4 @@
-# Ensure all shell scripts use LF
-*.sh text eol=lf
-run text eol=lf
-# Dockerfile needs LF too
-Dockerfile text eol=lf
+# Normalise everything to LF; the container runs Linux.
+* text=auto eol=lf
+# Binary assets must not be normalised.
+*.png binary

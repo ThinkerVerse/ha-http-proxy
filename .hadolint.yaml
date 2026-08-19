@@ -1,0 +1,6 @@
+---
+ignored:
+  # The base image is supplied by the Home Assistant builder via BUILD_FROM.
+  - DL3006
+  # Alpine package versions are pinned by the base image's Alpine release.
+  - DL3018

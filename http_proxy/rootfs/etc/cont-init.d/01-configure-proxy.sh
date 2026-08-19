@@ -1,60 +1,77 @@
 #!/usr/bin/with-contenv bashio
 # ==============================================================================
 # Home Assistant Add-on: HTTP Proxy
-# Configures the TinyProxy before running
+# Generates the Tinyproxy configuration from the add-on options
 # ==============================================================================
 
-# Get configuration values
-LOG_LEVEL=$(bashio::config 'log_level')
-AUTHENTICATION=$(bashio::config 'authentication')
-USERNAME=$(bashio::config 'username')
-PASSWORD=$(bashio::config 'password')
+declare log_level
+declare tinyproxy_log_level
+declare username
+declare password
+declare -a allowed_networks=()
 
-# Configure logging
-bashio::log.level "${LOG_LEVEL}"
+log_level=$(bashio::config 'log_level')
+bashio::log.level "${log_level}"
 bashio::log.info "Configuring HTTP Proxy..."
 
-# Create TinyProxy configuration - very minimal to avoid any syntax issues
-cat > "/etc/tinyproxy/tinyproxy.conf" << EOF
-# TinyProxy Configuration for Home Assistant
+# Tinyproxy only understands Critical/Error/Warning/Notice/Connect/Info, so map
+# the Home Assistant log levels onto the closest Tinyproxy equivalent.
+case "${log_level}" in
+    trace|debug)    tinyproxy_log_level="Info" ;;
+    info)           tinyproxy_log_level="Connect" ;;
+    notice)         tinyproxy_log_level="Notice" ;;
+    warning)        tinyproxy_log_level="Warning" ;;
+    error)          tinyproxy_log_level="Error" ;;
+    fatal)          tinyproxy_log_level="Critical" ;;
+    *)              tinyproxy_log_level="Connect" ;;
+esac
+
+cat > /etc/tinyproxy/tinyproxy.conf << EOF
+# Tinyproxy configuration for Home Assistant - generated at start-up.
+# Edit the add-on options instead of this file; it is overwritten on restart.
+User tinyproxy
+Group tinyproxy
+
 Port 8888
 Timeout 600
-LogLevel Critical
+MaxClients 100
 
-# Disable all logging
+LogFile "/var/log/tinyproxy/tinyproxy.log"
+LogLevel ${tinyproxy_log_level}
 Syslog Off
 
-# Connection settings
+# Ports permitted for HTTPS/CONNECT tunnelling.
 ConnectPort 443
+ConnectPort 563
 EOF
 
-# Add allowed networks
-for network in $(bashio::config 'allowed_networks'); do
-  echo "Allow ${network}" >> "/etc/tinyproxy/tinyproxy.conf"
-done
-
-# Configure authentication if enabled
-if bashio::config.true 'authentication'; then
-  if ! bashio::var.is_empty "${USERNAME}" && ! bashio::var.is_empty "${PASSWORD}"; then
-    echo "BasicAuth ${USERNAME} ${PASSWORD}" >> "/etc/tinyproxy/tinyproxy.conf"
-  fi
+# Tinyproxy denies every client that is not covered by an Allow rule, but only
+# once at least one such rule exists - an empty list would open up the proxy.
+if bashio::config.has_value 'allowed_networks'; then
+    readarray -t allowed_networks < <(bashio::config 'allowed_networks')
 fi
 
-# Configure the web admin interface with nginx
-cat > "/etc/nginx/http.d/default.conf" << EOF
-server {
-    listen 8889;
-    root /var/www/html;
-    index index.html;
+if bashio::var.is_empty "${allowed_networks[*]:-}"; then
+    bashio::exit.nok \
+        "No allowed_networks configured; refusing to start an open proxy."
+fi
 
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
+for network in "${allowed_networks[@]}"; do
+    bashio::log.debug "Allowing network ${network}"
+    echo "Allow ${network}" >> /etc/tinyproxy/tinyproxy.conf
+done
 
-    location /api {
-        proxy_pass http://localhost:3000;
-    }
-}
-EOF
+if bashio::config.true 'authentication'; then
+    username=$(bashio::config 'username')
+    password=$(bashio::config 'password')
+
+    if bashio::var.is_empty "${username}" || bashio::var.is_empty "${password}"; then
+        bashio::exit.nok \
+            "Authentication is enabled but username or password is empty."
+    fi
+
+    echo "BasicAuth ${username} ${password}" >> /etc/tinyproxy/tinyproxy.conf
+    bashio::log.info "Proxy authentication enabled for user ${username}"
+fi
 
 bashio::log.info "HTTP Proxy configuration completed"
