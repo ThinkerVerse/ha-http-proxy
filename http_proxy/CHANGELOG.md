@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.3.1
+
+### Fixed
+
+- The add-on refused to start with "No allowed_networks configured" even when
+  networks were configured. 3.3.0 retyped the `password` option from `str` to
+  `password` for masking in the UI, and an existing empty password no longer
+  validated against that schema. `bashio::config` reads the options through the
+  Supervisor's `/addons/self/options/config` endpoint, which returns an error
+  when validation fails; bashio turns that into an empty object, so every option
+  silently read back as the string `"null"`. The `password` and `username`
+  options are typed `str` again, as they were in 3.2.0.
+- Options are now read directly from `/data/options.json`, the file the
+  Supervisor writes, rather than through the Supervisor API. A schema or API
+  problem can no longer blank the entire configuration without saying so.
+
 ## 3.3.0
 
 ### Fixed

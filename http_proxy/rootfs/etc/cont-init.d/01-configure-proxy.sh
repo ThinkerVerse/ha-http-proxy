@@ -4,13 +4,42 @@
 # Generates the Tinyproxy configuration from the add-on options
 # ==============================================================================
 
+readonly OPTIONS_FILE="/data/options.json"
+readonly PROXY_CONFIG="/etc/tinyproxy/tinyproxy.conf"
+
+# Options are read straight from the file the Supervisor writes.
+#
+# bashio::config does not read this file: it fetches the options through the
+# Supervisor's /addons/self/options/config endpoint, which returns an error if
+# the stored options do not validate against the current schema. bashio turns
+# that error into an empty object, after which every option silently reads back
+# as the string "null" - so a schema change can quietly blank the whole
+# configuration. Reading the file keeps that failure mode out of the picture.
+function option() {
+    jq --raw-output --arg key "${1}" \
+        'if has($key) and .[$key] != null then .[$key] else "" end' \
+        "${OPTIONS_FILE}"
+}
+
+function option_list() {
+    jq --raw-output --arg key "${1}" '.[$key][]?' "${OPTIONS_FILE}"
+}
+
 declare log_level
 declare tinyproxy_log_level
 declare username
 declare password
 declare -a allowed_networks=()
 
-log_level=$(bashio::config 'log_level')
+if ! bashio::fs.file_exists "${OPTIONS_FILE}"; then
+    bashio::exit.nok "Add-on options file ${OPTIONS_FILE} is missing."
+fi
+
+log_level=$(option 'log_level')
+if bashio::var.is_empty "${log_level}"; then
+    log_level="info"
+fi
+
 bashio::log.level "${log_level}"
 bashio::log.info "Configuring HTTP Proxy..."
 
@@ -26,7 +55,7 @@ case "${log_level}" in
     *)              tinyproxy_log_level="Connect" ;;
 esac
 
-cat > /etc/tinyproxy/tinyproxy.conf << EOF
+cat > "${PROXY_CONFIG}" << EOF
 # Tinyproxy configuration for Home Assistant - generated at start-up.
 # Edit the add-on options instead of this file; it is overwritten on restart.
 User tinyproxy
@@ -47,30 +76,30 @@ EOF
 
 # Tinyproxy denies every client that is not covered by an Allow rule, but only
 # once at least one such rule exists - an empty list would open up the proxy.
-if bashio::config.has_value 'allowed_networks'; then
-    readarray -t allowed_networks < <(bashio::config 'allowed_networks')
-fi
+readarray -t allowed_networks < <(option_list 'allowed_networks')
 
-if bashio::var.is_empty "${allowed_networks[*]:-}"; then
+if [[ "${#allowed_networks[@]}" -eq 0 ]]; then
     bashio::exit.nok \
-        "No allowed_networks configured; refusing to start an open proxy."
+        "No allowed_networks configured; refusing to start an open proxy. Add at
+        least one network (for example 192.168.0.0/16) on the add-on's
+        Configuration tab."
 fi
 
 for network in "${allowed_networks[@]}"; do
     bashio::log.debug "Allowing network ${network}"
-    echo "Allow ${network}" >> /etc/tinyproxy/tinyproxy.conf
+    echo "Allow ${network}" >> "${PROXY_CONFIG}"
 done
 
-if bashio::config.true 'authentication'; then
-    username=$(bashio::config 'username')
-    password=$(bashio::config 'password')
+if [[ "$(option 'authentication')" == "true" ]]; then
+    username=$(option 'username')
+    password=$(option 'password')
 
     if bashio::var.is_empty "${username}" || bashio::var.is_empty "${password}"; then
         bashio::exit.nok \
             "Authentication is enabled but username or password is empty."
     fi
 
-    echo "BasicAuth ${username} ${password}" >> /etc/tinyproxy/tinyproxy.conf
+    echo "BasicAuth ${username} ${password}" >> "${PROXY_CONFIG}"
     bashio::log.info "Proxy authentication enabled for user ${username}"
 fi
 
