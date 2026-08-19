@@ -1,12 +1,17 @@
 {
-    "name": "http-proxy-api",
-    "version": "1.0.0",
-    "description": "API for HTTP Proxy Home Assistant addon",
-    "main": "server.js",
-    "scripts": {
-      "start": "node server.js"
-    },
-    "dependencies": {
-      "express": "^4.21.2"
-    }
+  "name": "http-proxy-api",
+  "version": "3.3.0",
+  "private": true,
+  "description": "Admin API for the HTTP Proxy Home Assistant add-on",
+  "license": "MIT",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
   }
+}

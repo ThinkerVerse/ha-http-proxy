@@ -1,15 +1,17 @@
+---
 name: "HTTP Proxy"
-description: "HTTP proxy server for local network devices"
-version: "3.2.0"
+version: "3.3.0"
 slug: "http_proxy"
-init: false
+description: "HTTP proxy server for local network devices"
+url: "https://github.com/ThinkerVerse/ha-http-proxy/tree/main/http_proxy"
 arch:
-  - armhf
-  - armv7
   - aarch64
   - amd64
-  - i386
+init: false
 startup: services
+# Needed so the admin interface can persist option changes through the
+# Supervisor instead of writing /data/options.json, which is overwritten.
+hassio_api: true
 ports:
   8888/tcp: 8888
   8889/tcp: 8889
@@ -30,5 +32,5 @@ schema:
   allowed_networks:
     - str
   authentication: bool
-  username: str
-  password: str
+  username: str?
+  password: password?

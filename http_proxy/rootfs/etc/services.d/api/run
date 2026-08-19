@@ -1,8 +1,8 @@
 #!/usr/bin/with-contenv bashio
 # ==============================================================================
 # Home Assistant Add-on: HTTP Proxy
-# Runs API server
+# Runs the admin API server
 # ==============================================================================
 bashio::log.info "Starting API server..."
-cd /opt/api
+cd /opt/api || bashio::exit.nok "Could not change to /opt/api"
 exec node server.js

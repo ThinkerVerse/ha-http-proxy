@@ -1,0 +1,121 @@
+---
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint-addon:
+    name: Lint add-on config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Lint the add-on repository
+        uses: frenck/action-addon-linter@v2
+        with:
+          path: "./http_proxy"
+
+  lint-hadolint:
+    name: Hadolint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Lint the Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ./http_proxy/Dockerfile
+
+  lint-shell:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        env:
+          SHELLCHECK_OPTS: -s bash -e SC1008 -e SC2154
+        with:
+          additional_files: "run"
+
+  lint-api:
+    name: API server
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./http_proxy/api
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: http_proxy/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Syntax check
+        run: node --check server.js
+
+  build:
+    name: Build ${{ matrix.arch }}
+    needs: [lint-addon, lint-hadolint, lint-shell, lint-api]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64
+            platform: linux/arm64
+          - arch: amd64
+            platform: linux/amd64
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # The add-on has no `image` key, so the Supervisor builds it locally on the
+      # user's machine. Mirror that here by building the Dockerfile directly with
+      # the same build args the Supervisor passes.
+      - name: Resolve build arguments
+        id: meta
+        run: |
+          build_from=$(jq -er --arg arch "${{ matrix.arch }}" \
+            '.build_from[$arch]' http_proxy/build.json)
+          version=$(sed -n 's/^version: *"\(.*\)"/\1/p' http_proxy/config.yaml)
+          if [ -z "$version" ]; then
+            echo "Could not read version from config.yaml" >&2
+            exit 1
+          fi
+          echo "build_from=$build_from" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the add-on image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./http_proxy
+          platforms: ${{ matrix.platform }}
+          push: false
+          build-args: |
+            BUILD_FROM=${{ steps.meta.outputs.build_from }}
+            BUILD_ARCH=${{ matrix.arch }}
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
