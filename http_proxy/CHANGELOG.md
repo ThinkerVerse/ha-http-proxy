@@ -1,5 +1,38 @@
 # Changelog
 
+## 3.4.0
+
+### Fixed
+
+- The admin interface was unreachable. Two faults, either of which was enough on
+  its own:
+  - `proxy_pass http://127.0.0.1:3000/` carried a trailing slash, which makes
+    nginx strip the matched `/api/` prefix. Every API request arrived at the
+    server as `/status` instead of `/api/status` and returned 404, so the page
+    could never load any data.
+  - `listen [::]:8889` aborts nginx at startup with "Address family not
+    supported by protocol" on a container without IPv6. There is no longer an
+    IPv6 listener.
+
+### Added
+
+- The admin interface is served through Home Assistant ingress and appears in
+  the sidebar. Home Assistant authenticates the user, so the page is no longer
+  open to anyone who can reach the port. The ingress listener accepts requests
+  only from the Supervisor.
+- The interface was rebuilt: proxy state with uptime, a log viewer with optional
+  auto-refresh, and a configuration form that explains what each option actually
+  does - in particular that `authentication` guards the proxy on port 8888 and
+  not the admin page itself. Adapts to light and dark themes.
+- `GET /api/status` now reports the proxy's pid and uptime, read from
+  `/proc/<pid>/stat`, rather than only whether it is alive.
+
+### Changed
+
+- Port 8889 is no longer mapped by default. The ingress panel replaces it; map
+  the port yourself only if you need access from outside Home Assistant, keeping
+  in mind that this listener has no authentication of its own.
+
 ## 3.3.1
 
 ### Fixed

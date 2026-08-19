@@ -30,12 +30,26 @@ Only `aarch64` and `amd64` are supported.
 |--------|-------------|---------|
 | `log_level` | Verbosity of the add-on and proxy logs | `info` |
 | `allowed_networks` | Networks permitted to use the proxy (IPv4 address or CIDR range). At least one entry is required. | `["192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8"]` |
-| `authentication` | Require a username and password for proxy access | `false` |
+| `authentication` | Require proxy clients to send a username and password (see below) | `false` |
 | `username` | Username, required when `authentication` is enabled | `""` |
 | `password` | Password, required when `authentication` is enabled | `""` |
 
-Tinyproxy denies any client that is not covered by `allowed_networks`. The add-on
-refuses to start when the list is empty rather than running an open proxy.
+### Who is allowed to use the proxy
+
+There are two independent gates, and neither of them protects the admin
+interface:
+
+- **`allowed_networks`** decides *which machines* may connect. Tinyproxy refuses
+  any client outside the list. The add-on refuses to start when the list is
+  empty rather than running an open proxy.
+- **`authentication`** decides whether those machines must *also* prove who they
+  are. With it off, any device inside the allowed networks can use the proxy
+  immediately. With it on, a device must send the configured username and
+  password or the proxy replies `407 Proxy Authentication Required`. Turn it on
+  when "anyone on my network" is too broad.
+
+Most browsers and operating systems will prompt for the proxy credentials the
+first time they are needed.
 
 `log_level` is mapped onto the closest Tinyproxy level:
 
@@ -62,23 +76,25 @@ HTTPS (`CONNECT`) tunnelling is permitted to ports 443 and 563.
 
 ### Admin Interface
 
-The add-on serves an admin interface at `http://your-home-assistant-ip:8889`.
+The add-on adds an **HTTP Proxy** entry to the Home Assistant sidebar. Open it
+from there: Home Assistant serves the page itself and applies its own
+authentication, so no extra port needs to be exposed.
 
-From there you can:
+From the panel you can:
 
-- **See whether the proxy is running.**
-- **View recent access logs** (the last 100 lines, refreshed on demand).
-- **Change the configuration** — log level, allowed networks, authentication and
-  credentials. Changes are saved through the Supervisor, exactly as if you had
-  edited them on the add-on's Configuration tab, and take effect after an add-on
-  restart.
-- **Restart the proxy service** without restarting the whole add-on.
+- See whether the proxy is running and how long it has been up.
+- Read the last 100 lines of the proxy log, optionally auto-refreshing.
+- Change the log level, allowed networks, and authentication settings. Changes
+  are saved through the Supervisor, exactly as if you had edited them on the
+  add-on's Configuration tab, and take effect after an add-on restart. The
+  stored proxy password is never sent to the browser: leave the field blank to
+  keep it.
+- Restart the proxy service without restarting the whole add-on.
 
-> **The admin interface has no authentication of its own.** Anyone who can reach
-> port 8889 can change the proxy configuration. Expose it only on a trusted
-> network, or remove the `8889/tcp` port mapping on the add-on's Configuration
-> tab if you do not need it. The interface never displays the stored proxy
-> password: leave the password field blank to keep the current one.
+> The same page is also served on port `8889`, which is **unmapped by default**.
+> That listener has no authentication of its own, so anyone who can reach the
+> port can change the proxy configuration. Map it on the add-on's Configuration
+> tab only if you need access from outside Home Assistant.
 
 ## Troubleshooting
 

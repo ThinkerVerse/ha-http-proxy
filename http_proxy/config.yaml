@@ -1,6 +1,6 @@
 ---
 name: "HTTP Proxy"
-version: "3.3.1"
+version: "3.4.0"
 slug: "http_proxy"
 description: "HTTP proxy server for local network devices"
 url: "https://github.com/ThinkerVerse/ha-http-proxy/tree/main/http_proxy"
@@ -12,12 +12,20 @@ startup: services
 # Needed so the admin interface can persist option changes through the
 # Supervisor instead of writing /data/options.json, which is overwritten.
 hassio_api: true
+# The admin interface is served through Home Assistant, which authenticates the
+# user. ingress_port is internal and must not appear under `ports`.
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:web
+panel_title: "HTTP Proxy"
 ports:
   8888/tcp: 8888
-  8889/tcp: 8889
+  # Direct, unauthenticated access to the admin interface. Left unmapped on
+  # purpose; set a port here only if you need it outside Home Assistant.
+  8889/tcp: null
 ports_description:
   8888/tcp: "HTTP proxy port"
-  8889/tcp: "Admin interface"
+  8889/tcp: "Admin interface (no authentication - prefer the sidebar panel)"
 options:
   log_level: "info"
   allowed_networks:
