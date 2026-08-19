@@ -3,32 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTTP Proxy Admin</title>
+    <title>HTTP Proxy</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>HTTP Proxy Admin Interface</h1>
+    <div class="wrap">
+        <header class="page-head">
+            <h1>HTTP Proxy</h1>
+            <span id="status-pill" class="pill pill--unknown">Checking&hellip;</span>
+        </header>
 
-        <div id="message-area" class="message-area"></div>
+        <div id="message" class="message" role="status" aria-live="polite"></div>
 
-        <section id="proxy-status">
-            <h2>Proxy Status</h2>
-            <p><strong>Status:</strong> <span id="status-value">Loading...</span></p>
-            <button id="refresh-status-btn">Refresh Status</button>
+        <section class="card">
+            <div class="card__head">
+                <h2>Status</h2>
+                <button type="button" class="btn btn--ghost" id="refresh-status">Refresh</button>
+            </div>
+            <dl class="facts">
+                <div class="fact">
+                    <dt>Proxy service</dt>
+                    <dd id="fact-state">&mdash;</dd>
+                </div>
+                <div class="fact">
+                    <dt>Running for</dt>
+                    <dd id="fact-uptime">&mdash;</dd>
+                </div>
+                <div class="fact">
+                    <dt>Listening on</dt>
+                    <dd>port 8888</dd>
+                </div>
+            </dl>
+            <p class="hint">
+                Point a device at this Home Assistant machine's IP address on port
+                8888, using proxy type HTTP.
+            </p>
         </section>
 
-        <section id="access-logs">
-            <h2>Access Logs</h2>
-            <button id="refresh-logs-btn">Refresh Logs</button>
-            <pre id="logs-content">Loading logs...</pre>
-        </section>
-
-        <section id="configuration-settings">
-            <h2>Configuration Settings</h2>
-            <form id="config-form">
-                <div>
-                    <label for="log_level">Log Level:</label>
+        <section class="card">
+            <div class="card__head">
+                <h2>Configuration</h2>
+            </div>
+            <form id="config-form" autocomplete="off">
+                <div class="field">
+                    <label for="log_level">Log level</label>
                     <select id="log_level" name="log_level">
                         <option value="trace">Trace</option>
                         <option value="debug">Debug</option>
@@ -38,32 +56,94 @@
                         <option value="error">Error</option>
                         <option value="fatal">Fatal</option>
                     </select>
+                    <p class="hint">
+                        How much detail the proxy writes to its log. Use
+                        <strong>debug</strong> to record every connection while
+                        troubleshooting.
+                    </p>
                 </div>
-                <div>
-                    <label for="allowed_networks">Allowed Networks (comma-separated):</label>
-                    <input type="text" id="allowed_networks" name="allowed_networks">
+
+                <div class="field">
+                    <label for="allowed_networks">Allowed networks</label>
+                    <input type="text" id="allowed_networks" name="allowed_networks"
+                           placeholder="192.168.0.0/16, 10.0.0.0/8">
+                    <p class="hint">
+                        <strong>Which devices may use the proxy.</strong>
+                        Comma-separated IPv4 addresses or CIDR ranges. Anything
+                        outside this list is refused. At least one entry is
+                        required &mdash; the add-on will not start with an empty
+                        list, because that would leave the proxy open to everyone.
+                    </p>
                 </div>
-                <div>
-                    <label for="authentication">Enable Authentication:</label>
-                    <input type="checkbox" id="authentication" name="authentication">
+
+                <div class="field">
+                    <label class="check">
+                        <input type="checkbox" id="authentication" name="authentication">
+                        <span>Require a username and password</span>
+                    </label>
+                    <p class="hint">
+                        <strong>This protects the proxy on port 8888, not this
+                        page.</strong> With it off, any device inside the allowed
+                        networks can use the proxy straight away. With it on, a
+                        device must also send these credentials or the proxy
+                        answers <code>407 Proxy Authentication Required</code>.
+                        Turn it on when &ldquo;anyone on my network&rdquo; is too
+                        broad.
+                    </p>
                 </div>
-                <div>
-                    <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" disabled>
+
+                <div class="field field--indent">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" disabled
+                           autocomplete="off">
                 </div>
-                <div>
-                    <label for="password">Password:</label>
-                    <input type="password" id="password" name="password"
-                           autocomplete="new-password" disabled>
-                    <small id="password-hint"></small>
+
+                <div class="field field--indent">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" disabled
+                           autocomplete="new-password">
+                    <p class="hint" id="password-hint"></p>
                 </div>
-                <button type="button" id="save-config-btn">Save Configuration</button>
+
+                <div class="actions">
+                    <button type="button" class="btn btn--primary" id="save-config">
+                        Save configuration
+                    </button>
+                    <span class="hint hint--inline">
+                        Changes apply after the add-on restarts.
+                    </span>
+                </div>
             </form>
         </section>
 
-        <section id="controls">
-            <h2>Controls</h2>
-            <button id="restart-proxy-btn">Restart Proxy</button>
+        <section class="card">
+            <div class="card__head">
+                <h2>Recent activity</h2>
+                <div class="card__tools">
+                    <label class="check check--sm">
+                        <input type="checkbox" id="auto-refresh">
+                        <span>Auto-refresh</span>
+                    </label>
+                    <button type="button" class="btn btn--ghost" id="refresh-logs">Refresh</button>
+                </div>
+            </div>
+            <pre id="logs" class="logs">Loading&hellip;</pre>
+            <p class="hint">
+                The last 100 lines from the proxy. Connections are only recorded
+                at log level <strong>info</strong> or more detailed.
+            </p>
+        </section>
+
+        <section class="card">
+            <div class="card__head">
+                <h2>Controls</h2>
+            </div>
+            <div class="actions">
+                <button type="button" class="btn" id="restart-proxy">Restart proxy</button>
+                <span class="hint hint--inline">
+                    Restarts the proxy service only, not the whole add-on.
+                </span>
+            </div>
         </section>
     </div>
 

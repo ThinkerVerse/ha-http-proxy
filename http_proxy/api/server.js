@@ -12,6 +12,9 @@ const OPTIONS_PATH = '/data/options.json';
 const LOG_PATH = '/var/log/tinyproxy/tinyproxy.log';
 const LOG_LINES = 100;
 
+// USER_HZ on Linux; /proc/<pid>/stat reports start time in these ticks.
+const CLOCK_TICKS_PER_SECOND = 100;
+
 // s6-overlay v3 exposes the supervised services here; the v2 path is kept as a
 // fallback so the endpoint keeps working on older base images.
 const SERVICE_PATHS = [
@@ -169,11 +172,42 @@ app.post('/api/config', async (req, res) => {
   }
 });
 
+/**
+ * Seconds the given pid has been running, from the kernel's own bookkeeping:
+ * field 22 of /proc/<pid>/stat is the process start time in clock ticks since
+ * boot, and /proc/uptime is how long ago boot was. Returns null if either read
+ * fails, which is not worth treating as an error.
+ */
+function processUptime(pid) {
+  try {
+    const systemUptime = parseFloat(fs.readFileSync('/proc/uptime', 'utf8').split(' ')[0]);
+    const stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8');
+    // The second field is the executable name in parentheses and may itself
+    // contain spaces, so split after the closing parenthesis.
+    const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+    // Field 22 overall is index 19 once the first two fields are removed.
+    const startTicks = parseInt(fields[19], 10);
+    if (!Number.isFinite(systemUptime) || !Number.isInteger(startTicks)) return null;
+    return Math.max(0, Math.round(systemUptime - startTicks / CLOCK_TICKS_PER_SECOND));
+  } catch {
+    return null;
+  }
+}
+
 app.get('/api/status', (req, res) => {
   // Match the proxy binary itself: a substring match would also hit the
   // s6-supervise process, which stays alive even when tinyproxy has died.
-  execFile('pgrep', ['-x', 'tinyproxy'], (error) => {
-    res.json({ running: !error });
+  execFile('pgrep', ['-x', 'tinyproxy'], (error, stdout) => {
+    if (error) {
+      res.json({ running: false, pid: null, uptime: null });
+      return;
+    }
+    const pid = parseInt(stdout.trim().split('\n')[0], 10);
+    res.json({
+      running: true,
+      pid: Number.isInteger(pid) ? pid : null,
+      uptime: Number.isInteger(pid) ? processUptime(pid) : null,
+    });
   });
 });
 

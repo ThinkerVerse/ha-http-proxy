@@ -1,158 +1,203 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const statusValue = document.getElementById('status-value');
-    const refreshStatusBtn = document.getElementById('refresh-status-btn');
+(() => {
+    'use strict';
 
-    const logsContent = document.getElementById('logs-content');
-    const refreshLogsBtn = document.getElementById('refresh-logs-btn');
-
-    const logLevelSelect = document.getElementById('log_level');
-    const allowedNetworksInput = document.getElementById('allowed_networks');
-    const authenticationCheckbox = document.getElementById('authentication');
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const passwordHint = document.getElementById('password-hint');
-    const saveConfigBtn = document.getElementById('save-config-btn');
-
-    const restartProxyBtn = document.getElementById('restart-proxy-btn');
-    const messageArea = document.getElementById('message-area');
-
-    const API_BASE_URL = '/api';
-
-    // Tracks whether a password is already stored, so an empty password field
-    // can mean "leave it alone" instead of "clear it".
-    let passwordIsSet = false;
-
-    // --- Message Display Utility ---
-    let messageTimer;
-    function showMessage(message, type = 'success') {
-        messageArea.textContent = message;
-        messageArea.className = `message-area ${type}`;
-        clearTimeout(messageTimer);
-        messageTimer = setTimeout(() => {
-            messageArea.textContent = '';
-            messageArea.className = 'message-area';
-        }, 5000);
+    // Work out where the API lives. Home Assistant serves this page under
+    // /api/hassio_ingress/<token>/, so a hardcoded "/api" would miss it.
+    // Anchor to the ingress prefix when it is present (with or without a
+    // trailing slash), otherwise resolve against the current directory.
+    function resolveApiBase(pathname) {
+        const ingress = pathname.match(/^(.*\/api\/hassio_ingress\/[^/]+)/);
+        if (ingress) return `${ingress[1]}/api`;
+        return `${pathname.replace(/[^/]*$/, '')}api`;
     }
 
-    async function requestJson(path, options) {
-        const response = await fetch(`${API_BASE_URL}${path}`, options);
+    const API_BASE = resolveApiBase(window.location.pathname);
+
+    const LOG_POLL_MS = 10000;
+
+    const el = (id) => document.getElementById(id);
+
+    const statusPill = el('status-pill');
+    const factState = el('fact-state');
+    const factUptime = el('fact-uptime');
+    const message = el('message');
+    const logs = el('logs');
+    const autoRefresh = el('auto-refresh');
+    const logLevel = el('log_level');
+    const allowedNetworks = el('allowed_networks');
+    const authentication = el('authentication');
+    const username = el('username');
+    const password = el('password');
+    const passwordHint = el('password-hint');
+    const saveButton = el('save-config');
+    const restartButton = el('restart-proxy');
+
+    // Whether a password is already stored, so a blank field can mean
+    // "leave it alone" rather than "clear it".
+    let passwordIsSet = false;
+    let logTimer = null;
+    let messageTimer = null;
+
+    function showMessage(text, kind) {
+        message.textContent = text;
+        message.className = `message message--${kind}`;
+        clearTimeout(messageTimer);
+        messageTimer = setTimeout(() => {
+            message.className = 'message';
+            message.textContent = '';
+        }, 6000);
+    }
+
+    async function api(path, options) {
+        const response = await fetch(`${API_BASE}${path}`, options);
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            throw new Error(data.message || `Request failed (HTTP ${response.status})`);
         }
         return data;
     }
 
-    // --- Proxy Status ---
-    async function fetchStatus() {
+    function formatDuration(seconds) {
+        if (seconds === null || seconds === undefined) return '—';
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        if (days) return `${days}d ${hours}h`;
+        if (hours) return `${hours}h ${minutes}m`;
+        if (minutes) return `${minutes}m`;
+        return `${seconds}s`;
+    }
+
+    // --- status ---
+    async function loadStatus() {
         try {
-            const data = await requestJson('/status');
-            statusValue.textContent = data.running ? 'Running' : 'Stopped';
+            const data = await api('/status');
+            if (data.running) {
+                statusPill.textContent = 'Running';
+                statusPill.className = 'pill pill--ok';
+                factState.textContent = 'Running';
+                factUptime.textContent = formatDuration(data.uptime);
+            } else {
+                statusPill.textContent = 'Stopped';
+                statusPill.className = 'pill pill--bad';
+                factState.textContent = 'Stopped';
+                factUptime.textContent = '—';
+            }
         } catch (error) {
-            console.error('Error fetching status:', error);
-            statusValue.textContent = 'Error loading status';
-            showMessage(`Error fetching status: ${error.message}`, 'error');
+            statusPill.textContent = 'Unavailable';
+            statusPill.className = 'pill pill--bad';
+            factState.textContent = '—';
+            factUptime.textContent = '—';
+            showMessage(`Could not read status: ${error.message}`, 'error');
         }
     }
 
-    // --- Access Logs ---
-    async function fetchLogs() {
+    // --- logs ---
+    async function loadLogs(quiet) {
         try {
-            logsContent.textContent = 'Loading logs...';
-            const data = await requestJson('/logs');
-            logsContent.textContent = data.logs.join('\n') || 'No logs found.';
+            const data = await api('/logs');
+            logs.textContent = data.logs.length
+                ? data.logs.join('\n')
+                : 'Nothing logged yet. Connections are recorded at log level info or more detailed.';
+            logs.scrollTop = logs.scrollHeight;
         } catch (error) {
-            console.error('Error fetching logs:', error);
-            logsContent.textContent = 'Error loading logs.';
-            showMessage(`Error fetching logs: ${error.message}`, 'error');
+            logs.textContent = 'Could not load the log.';
+            if (!quiet) showMessage(`Could not load the log: ${error.message}`, 'error');
         }
     }
 
-    // --- Configuration ---
-    async function fetchConfig() {
-        try {
-            const config = await requestJson('/config');
-
-            logLevelSelect.value = config.log_level || 'info';
-            allowedNetworksInput.value = Array.isArray(config.allowed_networks)
-                ? config.allowed_networks.join(', ')
-                : '';
-            authenticationCheckbox.checked = config.authentication || false;
-            usernameInput.value = config.username || '';
-            passwordIsSet = Boolean(config.password_set);
-            passwordInput.value = '';
-            toggleAuthFields();
-        } catch (error) {
-            console.error('Error fetching config:', error);
-            showMessage(`Error fetching configuration: ${error.message}`, 'error');
+    function setAutoRefresh(on) {
+        clearInterval(logTimer);
+        logTimer = null;
+        if (on) {
+            logTimer = setInterval(() => {
+                loadLogs(true);
+                loadStatus();
+            }, LOG_POLL_MS);
         }
     }
 
-    function toggleAuthFields() {
-        const enabled = authenticationCheckbox.checked;
-        usernameInput.disabled = !enabled;
-        passwordInput.disabled = !enabled;
-        passwordInput.placeholder = passwordIsSet ? '(unchanged)' : '';
-        passwordHint.textContent = enabled && passwordIsSet
+    // --- configuration ---
+    function syncAuthFields() {
+        const on = authentication.checked;
+        username.disabled = !on;
+        password.disabled = !on;
+        password.placeholder = passwordIsSet ? '(unchanged)' : '';
+        passwordHint.textContent = on && passwordIsSet
             ? 'Leave blank to keep the current password.'
             : '';
     }
 
-    authenticationCheckbox.addEventListener('change', toggleAuthFields);
+    async function loadConfig() {
+        try {
+            const config = await api('/config');
+            logLevel.value = config.log_level || 'info';
+            allowedNetworks.value = Array.isArray(config.allowed_networks)
+                ? config.allowed_networks.join(', ')
+                : '';
+            authentication.checked = Boolean(config.authentication);
+            username.value = config.username || '';
+            passwordIsSet = Boolean(config.password_set);
+            password.value = '';
+            syncAuthFields();
+        } catch (error) {
+            showMessage(`Could not load the configuration: ${error.message}`, 'error');
+        }
+    }
 
     async function saveConfig() {
-        const newConfig = {
-            log_level: logLevelSelect.value,
-            allowed_networks: allowedNetworksInput.value
+        const payload = {
+            log_level: logLevel.value,
+            allowed_networks: allowedNetworks.value
                 .split(',')
-                .map((net) => net.trim())
-                .filter((net) => net),
-            authentication: authenticationCheckbox.checked,
-            username: usernameInput.value,
+                .map((n) => n.trim())
+                .filter(Boolean),
+            authentication: authentication.checked,
+            username: username.value,
         };
-
         // Only send a password when one was actually typed.
-        if (passwordInput.value) {
-            newConfig.password = passwordInput.value;
-        }
+        if (password.value) payload.password = password.value;
 
+        saveButton.disabled = true;
         try {
-            const result = await requestJson('/config', {
+            const result = await api('/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newConfig),
+                body: JSON.stringify(payload),
             });
-            showMessage(result.message, 'success');
-            await fetchConfig();
+            showMessage(result.message, 'ok');
+            await loadConfig();
         } catch (error) {
-            console.error('Error saving config:', error);
-            showMessage(`Error saving configuration: ${error.message}`, 'error');
+            showMessage(error.message, 'error');
+        } finally {
+            saveButton.disabled = false;
         }
     }
 
-    // --- Controls ---
+    // --- controls ---
     async function restartProxy() {
-        if (!confirm('Are you sure you want to restart the proxy?')) {
-            return;
-        }
+        if (!confirm('Restart the proxy service? Active connections will drop.')) return;
+        restartButton.disabled = true;
         try {
-            const result = await requestJson('/proxy/restart', { method: 'POST' });
-            showMessage(result.message, 'success');
-            setTimeout(fetchStatus, 2000);
+            const result = await api('/proxy/restart', { method: 'POST' });
+            showMessage(result.message, 'ok');
+            setTimeout(loadStatus, 2000);
         } catch (error) {
-            console.error('Error restarting proxy:', error);
-            showMessage(`Error restarting proxy: ${error.message}`, 'error');
+            showMessage(error.message, 'error');
+        } finally {
+            restartButton.disabled = false;
         }
     }
 
-    // --- Event Listeners ---
-    refreshStatusBtn.addEventListener('click', fetchStatus);
-    refreshLogsBtn.addEventListener('click', fetchLogs);
-    saveConfigBtn.addEventListener('click', saveConfig);
-    restartProxyBtn.addEventListener('click', restartProxy);
+    // --- wiring ---
+    el('refresh-status').addEventListener('click', loadStatus);
+    el('refresh-logs').addEventListener('click', () => loadLogs(false));
+    autoRefresh.addEventListener('change', () => setAutoRefresh(autoRefresh.checked));
+    authentication.addEventListener('change', syncAuthFields);
+    saveButton.addEventListener('click', saveConfig);
+    restartButton.addEventListener('click', restartProxy);
 
-    // --- Initial Data Load ---
-    fetchStatus();
-    fetchLogs();
-    fetchConfig();
-});
+    loadStatus();
+    loadLogs(false);
+    loadConfig();
+})();
