@@ -76,15 +76,46 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [aarch64, amd64]
+        include:
+          - arch: aarch64
+            platform: linux/arm64
+          - arch: amd64
+            platform: linux/amd64
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      - name: Build the add-on
-        uses: home-assistant/builder@master
+      # The add-on has no `image` key, so the Supervisor builds it locally on the
+      # user's machine. Mirror that here by building the Dockerfile directly with
+      # the same build args the Supervisor passes.
+      - name: Resolve build arguments
+        id: meta
+        run: |
+          build_from=$(jq -er --arg arch "${{ matrix.arch }}" \
+            '.build_from[$arch]' http_proxy/build.json)
+          version=$(sed -n 's/^version: *"\(.*\)"/\1/p' http_proxy/config.yaml)
+          if [ -z "$version" ]; then
+            echo "Could not read version from config.yaml" >&2
+            exit 1
+          fi
+          echo "build_from=$build_from" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the add-on image
+        uses: docker/build-push-action@v6
         with:
-          args: |
-            --test \
-            --${{ matrix.arch }} \
-            --target /data/http_proxy
+          context: ./http_proxy
+          platforms: ${{ matrix.platform }}
+          push: false
+          build-args: |
+            BUILD_FROM=${{ steps.meta.outputs.build_from }}
+            BUILD_ARCH=${{ matrix.arch }}
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}

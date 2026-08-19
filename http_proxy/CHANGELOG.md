@@ -48,7 +48,7 @@
 - Dropped the unused `openssl` and `curl` packages and the redundant `run.sh`
   sleep loop; s6-overlay supervises the services directly.
 - Added a CI workflow running add-on config linting, Hadolint, ShellCheck and a
-  test build for both architectures.
+  Docker build for both architectures.
 
 ## 3.2.0
 
