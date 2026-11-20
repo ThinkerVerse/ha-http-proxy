@@ -1,5 +1,25 @@
 # Changelog
 
+## 3.4.1
+
+### Security
+
+- Upgraded the admin API to Express 5 (5.3.0). Express 4.22.2 pulled in
+  vulnerable versions of `proxy-addr` (critical: IP spoofing via IPv4-mapped
+  IPv6 trust subnets), `body-parser` (high: denial of service via trailing bytes
+  after a compressed body) and `qs` (moderate: denial of service). `npm audit`
+  now reports no vulnerabilities. The API's behaviour is unchanged.
+
+### Changed
+
+- Base images updated from Alpine 3.22 to 3.24 (Node.js 24, nginx 1.30,
+  Tinyproxy 1.11.3).
+- The admin API now declares Node.js 20 or newer.
+- CI: updated `actions/checkout` and `actions/setup-node` to v7, the Docker
+  actions to their current majors and Hadolint to v3.5.0; pinned ShellCheck
+  to 2.0.0 instead of `master`; the API job runs on Node.js 24 to match the
+  image.
+
 ## 3.4.0
 
 ### Fixed
